@@ -1,5 +1,1 @@
-<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="128" height="128" fill="#E5E7EB"/>
-  <circle cx="64" cy="45" r="20" fill="#9CA3AF"/>
-  <path d="M64 75C45.2223 75 30 90.2223 30 109V128H98V109C98 90.2223 82.7777 75 64 75Z" fill="#9CA3AF"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" fill="none" viewBox="0 0 128 128"><rect width="128" height="128" fill="#E5E7EB"/><circle cx="64" cy="45" r="20" fill="#9CA3AF"/><path fill="#9CA3AF" d="M64 75C45.2223 75 30 90.2223 30 109V128H98V109C98 90.2223 82.7777 75 64 75Z"/></svg>
