@@ -90,6 +90,32 @@ export default function DapurAIPage() {
     }
   }
 
+  const handleRenameSession = async (sessionId, newTitle) => {
+    try {
+      await api.chat.updateSessionTitle(sessionId, newTitle)
+      await loadChatSessions() // Refresh sessions list
+    } catch (error) {
+      console.error("Error renaming session:", error)
+    }
+  }
+
+  const handleDeleteSession = async (sessionId) => {
+    try {
+      await api.chat.deleteSession(sessionId)
+      
+      // If we're currently viewing the deleted session, redirect to new chat
+      if (currentSessionId === sessionId) {
+        router.push('/dapur-ai')
+        setCurrentSessionId(null)
+        setMessages([])
+      }
+      
+      await loadChatSessions() // Refresh sessions list
+    } catch (error) {
+      console.error("Error deleting session:", error)
+    }
+  }
+
   const loadSavedRecipes = async () => {
     if (!user) return
     
@@ -454,6 +480,8 @@ export default function DapurAIPage() {
         chatSessions={chatSessions}
         onSelectSession={handleSelectSession}
         onNewChat={createNewChatSession}
+        onRenameSession={handleRenameSession}
+        onDeleteSession={handleDeleteSession}
       />
 
       <div className="flex-1 flex flex-col">
