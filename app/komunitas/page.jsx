@@ -8,7 +8,6 @@ import { CommunityFeed } from "@/components/komunitas/community-feed"
 import { RecipeDetailModal } from "@/components/komunitas/recipe-detail-modal"
 import Header from "@/components/header"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { 
   Select,
   SelectContent,

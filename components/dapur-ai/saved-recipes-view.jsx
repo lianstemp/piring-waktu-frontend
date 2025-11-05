@@ -4,8 +4,6 @@ import { useState } from "react"
 
 export function SavedRecipesView({ 
   savedViewRecipes, 
-  setSavedViewRecipes, 
-  savedRecipes, 
   cookedRecipes,
   toggleSaveRecipe,
   onMarkAsCooked 

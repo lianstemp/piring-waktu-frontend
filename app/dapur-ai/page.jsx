@@ -511,8 +511,6 @@ export default function DapurAIPage() {
           {savedViewRecipes ? (
             <SavedRecipesView
               savedViewRecipes={savedViewRecipes}
-              setSavedViewRecipes={setSavedViewRecipes}
-              savedRecipes={savedRecipes}
               cookedRecipes={cookedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               onMarkAsCooked={handleMarkAsCooked}
@@ -520,7 +518,6 @@ export default function DapurAIPage() {
           ) : cookedViewRecipes ? (
             <CookedRecipesView
               cookedViewRecipes={cookedViewRecipes}
-              setCookedViewRecipes={setCookedViewRecipes}
             />
           ) : messages.length === 0 ? (
             <EmptyState />

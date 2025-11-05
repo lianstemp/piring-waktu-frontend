@@ -1,11 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Star, Clock, Users, ChefHat, Calendar, Eye } from "lucide-react"
 
 export function CookedRecipesView({ 
-  cookedViewRecipes, 
-  setCookedViewRecipes
+  cookedViewRecipes
 }) {
   const renderStars = (rating) => {
     if (!rating) return null
