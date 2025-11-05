@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable experimental features for Cloudflare Workers
+  experimental: {
+    runtime: 'edge',
+  },
   images: {
     remotePatterns: [
       {

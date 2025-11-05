@@ -7,6 +7,9 @@ export async function GET(request) {
   const next = searchParams.get('redirectTo') ?? '/dapur-ai'
 
   if (code) {
+    // Create the response first to properly handle cookies
+    const response = NextResponse.redirect(`${origin}${next}`)
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -17,17 +20,20 @@ export async function GET(request) {
           },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
-              request.cookies.set(name, value, options)
+              response.cookies.set(name, value, options)
             })
           },
         },
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    
+    if (!error && data?.session) {
+      return response
     }
+    
+    console.error('Auth callback error:', error)
   }
 
   // Return the user to an error page with instructions

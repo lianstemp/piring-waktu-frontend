@@ -1,9 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 
-export async function proxy(req) {
-  let supabaseResponse = NextResponse.next({
-    request: req,
+export async function proxy(request) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabase = createServerClient(
@@ -12,61 +14,45 @@ export async function proxy(req) {
     {
       cookies: {
         getAll() {
-          return req.cookies.getAll()
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request: req,
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
         },
       },
     }
   )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refresh session if expired - this is important for PKCE flow
+  const { data: { user } } = await supabase.auth.getUser()
 
   // Protected routes that require authentication
   const protectedRoutes = ['/dapur-ai', '/komunitas', '/profile']
   const isProtectedRoute = protectedRoutes.some(route => 
-    req.nextUrl.pathname.startsWith(route)
+    request.nextUrl.pathname.startsWith(route)
   )
 
   // If accessing protected route without user, redirect to login
   if (isProtectedRoute && !user) {
-    const redirectUrl = new URL('/login', req.url)
-    redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname)
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // If accessing login/register with user, redirect to dapur-ai
-  if ((req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register') && user) {
-    return NextResponse.redirect(new URL('/dapur-ai', req.url))
+  // Redirect authenticated users away from auth pages
+  const authRoutes = ['/login']
+  const isAuthRoute = authRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  )
+
+  if (isAuthRoute && user) {
+    const redirectTo = request.nextUrl.searchParams.get('redirectTo') || '/dapur-ai'
+    return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
-
-  return supabaseResponse
+  return response
 }
 
 export const config = {
