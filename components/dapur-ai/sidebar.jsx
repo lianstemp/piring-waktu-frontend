@@ -86,11 +86,7 @@ export function Sidebar({
             resetViews()
             onNewChat()
           }}
-          className={`w-full rounded-lg flex items-center justify-center gap-2 ${
-            !currentSession && !currentView ? 
-            "bg-primary hover:bg-primary/90 text-primary-foreground" : 
-            "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-          }`}
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg flex items-center justify-center gap-2"
         >
           <Plus size={18} />
           Chat Baru
