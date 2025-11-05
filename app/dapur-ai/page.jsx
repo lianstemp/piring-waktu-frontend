@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/dapur-ai/sidebar"
 import { ChatHeader } from "@/components/dapur-ai/chat-header"
@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client"
 import api from "@/lib/api"
 import { v4 as uuidv4 } from 'uuid'
 
-export default function DapurAIPage() {
+function DapurAIContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -609,5 +609,20 @@ export default function DapurAIPage() {
         />
       </div>
     </div>
+  )
+}
+
+export default function DapurAIPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Memuat...</p>
+        </div>
+      </div>
+    }>
+      <DapurAIContent />
+    </Suspense>
   )
 }
