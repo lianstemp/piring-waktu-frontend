@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Sidebar } from "@/components/dapur-ai/sidebar"
 import { ChatHeader } from "@/components/dapur-ai/chat-header"
 import { EmptyState } from "@/components/dapur-ai/empty-state"
@@ -13,6 +13,7 @@ import api from "@/lib/api"
 
 export default function DapurAIPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   
   const [user, setUser] = useState(null)
@@ -26,6 +27,7 @@ export default function DapurAIPage() {
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [chatSessions, setChatSessions] = useState([])
   const [authLoading, setAuthLoading] = useState(true)
+  const [isStreamingNewSession, setIsStreamingNewSession] = useState(false)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -45,8 +47,21 @@ export default function DapurAIPage() {
       loadChatSessions()
       loadSavedRecipes()
       loadCookedRecipes()
+      
+      // Check for session parameter
+      const sessionId = searchParams.get('session')
+      if (sessionId && sessionId !== 'new' && sessionId !== currentSessionId) {
+        // Only load if it's a different session and not currently streaming a new session
+        if (!isLoading && !isStreamingNewSession) {
+          loadChatSession(sessionId)
+        }
+      } else if (!sessionId) {
+        // New chat or no session parameter
+        setMessages([])
+        setCurrentSessionId(null)
+      }
     }
-  }, [user])
+  }, [user, searchParams])
 
   const checkAuth = async () => {
     try {
@@ -118,8 +133,13 @@ export default function DapurAIPage() {
   }
 
   const createNewChatSession = () => {
+    router.push('/dapur-ai')
     setCurrentSessionId(null)
     setMessages([])
+  }
+
+  const handleSelectSession = (sessionId) => {
+    router.push(`/dapur-ai?session=${sessionId}`)
   }
 
   const handleSendMessage = async (e) => {
@@ -137,6 +157,11 @@ export default function DapurAIPage() {
     setMessages((prev) => [...prev, userMessage])
 
     setIsLoading(true)
+    
+    // Set flag jika ini chat baru (tidak ada session ID)
+    if (!currentSessionId) {
+      setIsStreamingNewSession(true)
+    }
 
     try {
       // Session ID akan null jika ini chat baru
@@ -173,6 +198,11 @@ export default function DapurAIPage() {
               if (data.type === 'session_id') {
                 newSessionId = data.session_id
                 setCurrentSessionId(data.session_id)
+                // Update URL dengan session ID baru tanpa reload hanya jika belum ada session
+                const currentSessionParam = searchParams.get('session')
+                if (!currentSessionParam || currentSessionParam !== data.session_id) {
+                  window.history.replaceState(null, '', `/dapur-ai?session=${data.session_id}`)
+                }
                 // Reload chat sessions list
                 await loadChatSessions()
               } 
@@ -206,6 +236,7 @@ export default function DapurAIPage() {
               }
               else if (data.type === 'end') {
                 setIsLoading(false)
+                setIsStreamingNewSession(false)
               }
             } catch (error) {
               console.error("Error parsing streaming data:", error)
@@ -216,6 +247,7 @@ export default function DapurAIPage() {
     } catch (error) {
       console.error("Error sending message:", error)
       setIsLoading(false)
+      setIsStreamingNewSession(false)
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         type: "ai",
@@ -420,7 +452,7 @@ export default function DapurAIPage() {
         showSavedRecipes={showSavedRecipes}
         showCookedRecipes={showCookedRecipes}
         chatSessions={chatSessions}
-        onSelectSession={loadChatSession}
+        onSelectSession={handleSelectSession}
         onNewChat={createNewChatSession}
       />
 
