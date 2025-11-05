@@ -1,6 +1,8 @@
 "use client"
 
-import { Star, Clock, Users, ChefHat } from "lucide-react"
+import { Star, Clock, Users, ChefHat, Heart, MessageCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import api from "@/lib/api"
 
 export function CommunityFeed({ feedData, loading, onRecipeClick }) {
   if (loading) {
@@ -46,6 +48,27 @@ export function CommunityFeed({ feedData, loading, onRecipeClick }) {
 }
 
 function FeedCard({ recipe, onClick }) {
+  const [interactions, setInteractions] = useState({
+    likeCount: 0,
+    commentCount: 0
+  })
+
+  useEffect(() => {
+    loadInteractions()
+  }, [recipe.id])
+
+  const loadInteractions = async () => {
+    try {
+      const data = await api.recipe.getRecipeInteractions(recipe.id)
+      setInteractions({
+        likeCount: data.likeCount,
+        commentCount: data.commentCount
+      })
+    } catch (error) {
+      console.error('Error loading interactions:', error)
+    }
+  }
+
   const renderStars = (rating) => {
     if (!rating) return null
     
@@ -125,6 +148,26 @@ function FeedCard({ recipe, onClick }) {
             "{recipe.user_review}"
           </p>
         )}
+
+        {/* Interaction Stats */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/50">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Heart size={10} />
+              <span>{interactions.likeCount}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageCircle size={10} />
+              <span>{interactions.commentCount}</span>
+            </div>
+          </div>
+          <span className="text-xs">
+            {new Date(recipe.created_at).toLocaleDateString('id-ID', { 
+              day: 'numeric', 
+              month: 'short' 
+            })}
+          </span>
+        </div>
       </div>
     </div>
   )

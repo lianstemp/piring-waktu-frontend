@@ -110,6 +110,13 @@ export default function KomunitasPage() {
     setDetailModalOpen(true)
   }
 
+  const handleModalClose = () => {
+    setDetailModalOpen(false)
+    setSelectedRecipe(null)
+    // Refresh feed data to update interaction counts
+    loadCommunityFeed()
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -209,10 +216,7 @@ export default function KomunitasPage() {
       {selectedRecipe && (
         <RecipeDetailModal
           isOpen={detailModalOpen}
-          onClose={() => {
-            setDetailModalOpen(false)
-            setSelectedRecipe(null)
-          }}
+          onClose={handleModalClose}
           recipe={selectedRecipe}
         />
       )}

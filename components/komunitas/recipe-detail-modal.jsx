@@ -7,11 +7,89 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Star, Clock, Users, ChefHat, BookOpen, MessageCircle, Heart } from "lucide-react"
-import { useState } from "react"
+import { Star, Clock, Users, ChefHat, BookOpen, MessageCircle, Heart, Send } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Input } from "@/components/ui/input"
+import { createClient } from "@/lib/supabase/client"
+import api from "@/lib/api"
 
 export function RecipeDetailModal({ isOpen, onClose, recipe }) {
   const [activeTab, setActiveTab] = useState("recipe")
+  const [interactions, setInteractions] = useState({
+    likes: [],
+    comments: [],
+    likeCount: 0,
+    commentCount: 0,
+    userLiked: false
+  })
+  const [newComment, setNewComment] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (isOpen && recipe) {
+      checkAuth()
+      loadInteractions()
+    }
+  }, [isOpen, recipe])
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    setUser(user)
+  }
+
+  const loadInteractions = async () => {
+    try {
+      const data = await api.recipe.getRecipeInteractions(recipe.id)
+      setInteractions(data)
+    } catch (error) {
+      console.error('Error loading interactions:', error)
+    }
+  }
+
+  const handleLike = async () => {
+    if (!user) return
+    
+    try {
+      setLoading(true)
+      const result = await api.recipe.toggleLike(recipe.id)
+      
+      // Update local state
+      setInteractions(prev => ({
+        ...prev,
+        userLiked: result.liked,
+        likeCount: result.liked ? prev.likeCount + 1 : prev.likeCount - 1
+      }))
+    } catch (error) {
+      console.error('Error toggling like:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddComment = async (e) => {
+    e.preventDefault()
+    if (!user || !newComment.trim()) return
+
+    try {
+      setLoading(true)
+      const result = await api.recipe.addComment(recipe.id, newComment.trim())
+      
+      // Update local state
+      setInteractions(prev => ({
+        ...prev,
+        comments: [...prev.comments, result.comment],
+        commentCount: prev.commentCount + 1
+      }))
+      
+      setNewComment("")
+    } catch (error) {
+      console.error('Error adding comment:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (!recipe) return null
 
@@ -165,6 +243,16 @@ export function RecipeDetailModal({ isOpen, onClose, recipe }) {
                     Catatan
                   </button>
                 )}
+                <button
+                  onClick={() => setActiveTab("comments")}
+                  className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
+                    activeTab === "comments"
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Komentar ({interactions.commentCount})
+                </button>
               </div>
             </div>
 
@@ -225,22 +313,89 @@ export function RecipeDetailModal({ isOpen, onClose, recipe }) {
                   </p>
                 </div>
               )}
+
+              {activeTab === "comments" && (
+                <div className="space-y-4">
+                  {/* Add Comment Form */}
+                  {user && (
+                    <form onSubmit={handleAddComment} className="flex gap-2">
+                      <Input
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Tulis komentar..."
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="submit" 
+                        size="sm" 
+                        disabled={loading || !newComment.trim()}
+                      >
+                        <Send size={16} />
+                      </Button>
+                    </form>
+                  )}
+
+                  {/* Comments List */}
+                  <div className="space-y-3">
+                    {interactions.comments.length > 0 ? (
+                      interactions.comments.map((comment) => (
+                        <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-primary-foreground text-xs font-semibold">
+                              {comment.profiles?.full_name?.charAt(0) || 'A'}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold text-foreground">
+                                {comment.profiles?.full_name || 'Anonymous'}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(comment.created_at).toLocaleDateString('id-ID')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MessageCircle size={32} className="mx-auto mb-2 opacity-50" />
+                        <p>Belum ada komentar</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 pt-4 border-t border-border">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Heart size={16} className="mr-2" />
-                Suka
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                <MessageCircle size={16} className="mr-2" />
-                Komentar
-              </Button>
-              <Button size="sm" className="flex-1">
-                Coba Resep
-              </Button>
-            </div>
+            {user && (
+              <div className="flex gap-2 pt-4 border-t border-border">
+                <Button 
+                  variant={interactions.userLiked ? "default" : "outline"} 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={handleLike}
+                  disabled={loading}
+                >
+                  <Heart 
+                    size={16} 
+                    className={`mr-2 ${interactions.userLiked ? "fill-current" : ""}`} 
+                  />
+                  {interactions.userLiked ? "Disukai" : "Suka"} ({interactions.likeCount})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => setActiveTab("comments")}
+                >
+                  <MessageCircle size={16} className="mr-2" />
+                  Komentar ({interactions.commentCount})
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
