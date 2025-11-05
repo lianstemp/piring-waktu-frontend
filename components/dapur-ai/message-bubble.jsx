@@ -189,7 +189,9 @@ export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRec
 
         <div className="flex gap-2 pt-4 border-t border-border">
           <button
-            onClick={() => toggleSaveRecipe(sessionId, message.id, recipe.name, recipe)}
+            onClick={() => {
+              toggleSaveRecipe(sessionId, message.id, recipe.name, recipe)
+            }}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
               isRecipeSaved
                 ? "bg-primary text-primary-foreground"

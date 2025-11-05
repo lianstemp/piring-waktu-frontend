@@ -450,15 +450,23 @@ function DapurAIContent() {
   const toggleSaveRecipe = async (sessionId, messageId, recipeName, recipeData) => {
     if (!user) return
     
+    // Use currentSessionId if sessionId is not provided or null
+    const effectiveSessionId = sessionId || currentSessionId
+    
+    if (!effectiveSessionId) {
+      console.error("No session ID available for saving recipe")
+      return
+    }
+    
     try {
       const isAlreadySaved = savedRecipes.some(saved => 
-        saved.session_id === sessionId && saved.message_id === messageId
+        saved.session_id === effectiveSessionId && saved.message_id === messageId
       )
       
       if (isAlreadySaved) {
-        await api.recipe.unsaveRecipe(sessionId, messageId)
+        await api.recipe.unsaveRecipe(effectiveSessionId, messageId)
       } else {
-        await api.recipe.saveRecipe(sessionId, messageId, recipeName, recipeData)
+        await api.recipe.saveRecipe(effectiveSessionId, messageId, recipeName, recipeData)
       }
       
       // Refresh saved recipes list
@@ -510,9 +518,17 @@ function DapurAIContent() {
   const handleMarkAsCooked = async (cookedData) => {
     if (!user) return
     
+    // Use currentSessionId if sessionId is not provided or null
+    const effectiveSessionId = cookedData.sessionId || currentSessionId
+    
+    if (!effectiveSessionId) {
+      console.error("No session ID available for marking recipe as cooked")
+      return
+    }
+    
     try {
       await api.recipe.markAsCooked(
-        cookedData.sessionId,
+        effectiveSessionId,
         cookedData.messageId,
         cookedData.recipeName,
         cookedData.recipeData,
@@ -530,13 +546,13 @@ function DapurAIContent() {
       
       // Remove from saved recipes if it was saved
       setSavedRecipes((prev) => prev.filter(saved => 
-        !(saved.session_id === cookedData.sessionId && saved.message_id === cookedData.messageId)
+        !(saved.session_id === effectiveSessionId && saved.message_id === cookedData.messageId)
       ))
       
       // Also update savedViewRecipes if currently viewing saved recipes
       if (savedViewRecipes) {
         setSavedViewRecipes((prev) => prev.filter(saved => 
-          !(saved.session_id === cookedData.sessionId && saved.message_id === cookedData.messageId)
+          !(saved.session_id === effectiveSessionId && saved.message_id === cookedData.messageId)
         ))
       }
       
