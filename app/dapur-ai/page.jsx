@@ -7,6 +7,7 @@ import { ChatHeader } from "@/components/dapur-ai/chat-header"
 import { EmptyState } from "@/components/dapur-ai/empty-state"
 import { ChatMessages } from "@/components/dapur-ai/chat-messages"
 import { SavedRecipesView } from "@/components/dapur-ai/saved-recipes-view"
+import { CookedRecipesView } from "@/components/dapur-ai/cooked-recipes-view"
 import { ChatInput } from "@/components/dapur-ai/chat-input"
 import { createClient } from "@/lib/supabase/client"
 import api from "@/lib/api"
@@ -24,6 +25,7 @@ export default function DapurAIPage() {
   const [savedRecipes, setSavedRecipes] = useState([])
   const [savedViewRecipes, setSavedViewRecipes] = useState(null)
   const [cookedRecipes, setCookedRecipes] = useState([])
+  const [cookedViewRecipes, setCookedViewRecipes] = useState(null)
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [chatSessions, setChatSessions] = useState([])
   const [authLoading, setAuthLoading] = useState(true)
@@ -156,6 +158,11 @@ export default function DapurAIPage() {
     } catch (error) {
       console.error("Error loading chat session:", error)
     }
+  }
+
+  const resetViews = () => {
+    setSavedViewRecipes(null)
+    setCookedViewRecipes(null)
   }
 
   const createNewChatSession = () => {
@@ -404,10 +411,11 @@ export default function DapurAIPage() {
     
     try {
       const response = await api.recipe.getCookedRecipes()
-      // You can create a separate state for cooked recipes view if needed
+      setCookedViewRecipes(response.recipes || [])
       console.log("Cooked recipes:", response.recipes)
     } catch (error) {
       console.error("Error loading cooked recipes:", error)
+      setCookedViewRecipes([])
     }
   }
 
@@ -436,6 +444,13 @@ export default function DapurAIPage() {
       setSavedRecipes((prev) => prev.filter(saved => 
         !(saved.session_id === cookedData.sessionId && saved.message_id === cookedData.messageId)
       ))
+      
+      // Also update savedViewRecipes if currently viewing saved recipes
+      if (savedViewRecipes) {
+        setSavedViewRecipes((prev) => prev.filter(saved => 
+          !(saved.session_id === cookedData.sessionId && saved.message_id === cookedData.messageId)
+        ))
+      }
       
       console.log("Recipe marked as cooked and will appear in community:", cookedData)
     } catch (error) {
@@ -483,6 +498,7 @@ export default function DapurAIPage() {
         onNewChat={createNewChatSession}
         onRenameSession={handleRenameSession}
         onDeleteSession={handleDeleteSession}
+        resetViews={resetViews}
       />
 
       <div className="flex-1 flex flex-col">
@@ -500,6 +516,11 @@ export default function DapurAIPage() {
               cookedRecipes={cookedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               onMarkAsCooked={handleMarkAsCooked}
+            />
+          ) : cookedViewRecipes ? (
+            <CookedRecipesView
+              cookedViewRecipes={cookedViewRecipes}
+              setCookedViewRecipes={setCookedViewRecipes}
             />
           ) : messages.length === 0 ? (
             <EmptyState />

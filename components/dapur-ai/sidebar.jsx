@@ -30,7 +30,8 @@ export function Sidebar({
   onSelectSession,
   onNewChat,
   onRenameSession,
-  onDeleteSession
+  onDeleteSession,
+  resetViews
 }) {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -77,7 +78,10 @@ export function Sidebar({
 
       <div className="p-4">
         <Button 
-          onClick={onNewChat}
+          onClick={() => {
+            resetViews()
+            onNewChat()
+          }}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg flex items-center justify-center gap-2"
         >
           <Plus size={18} />
@@ -127,7 +131,10 @@ export function Sidebar({
                   className="group flex items-center w-full px-3 py-2 rounded-lg hover:bg-muted transition-colors"
                 >
                   <button
-                    onClick={() => onSelectSession(session.id)}
+                    onClick={() => {
+                      resetViews()
+                      onSelectSession(session.id)
+                    }}
                     className="flex-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors truncate"
                   >
                     <MessageSquare size={16} className="inline mr-2" />

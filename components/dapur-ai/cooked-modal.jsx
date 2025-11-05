@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { 
   Dialog,
   DialogContent,
@@ -47,6 +47,22 @@ export function CookedModal({
     servings: recipe?.servings || 1,
     difficulty: recipe?.difficulty || "mudah"
   })
+
+  // Update form data when recipe prop changes
+  useEffect(() => {
+    if (recipe) {
+      setFormData(prev => ({
+        ...prev,
+        recipe_name: recipe.name || "",
+        ingredients: recipe.ingredients || [],
+        instructions: recipe.instructions || [],
+        prep_time: recipe.prep_time || "",
+        cook_time: recipe.cook_time || "",
+        servings: recipe.servings || 1,
+        difficulty: recipe.difficulty || "mudah"
+      }))
+    }
+  }, [recipe])
 
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState("")

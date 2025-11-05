@@ -7,9 +7,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Star, Clock, Users, ChefHat, BookOpen, MessageCircle, Heart, Send } from "lucide-react"
+import { Star, Clock, Users, ChefHat, BookOpen, MessageCircle, Heart, Send, Trash2, MoreHorizontal } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { createClient } from "@/lib/supabase/client"
 import api from "@/lib/api"
 
@@ -86,6 +92,24 @@ export function RecipeDetailModal({ isOpen, onClose, recipe }) {
       setNewComment("")
     } catch (error) {
       console.error('Error adding comment:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    try {
+      setLoading(true)
+      await api.recipe.deleteComment(commentId)
+      
+      // Update local state
+      setInteractions(prev => ({
+        ...prev,
+        comments: prev.comments.filter(comment => comment.id !== commentId),
+        commentCount: prev.commentCount - 1
+      }))
+    } catch (error) {
+      console.error('Error deleting comment:', error)
     } finally {
       setLoading(false)
     }
@@ -339,20 +363,47 @@ export function RecipeDetailModal({ isOpen, onClose, recipe }) {
                   <div className="space-y-3">
                     {interactions.comments.length > 0 ? (
                       interactions.comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                        <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg group">
                           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-primary-foreground text-xs font-semibold">
                               {comment.profiles?.full_name?.charAt(0) || 'A'}
                             </span>
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-sm font-semibold text-foreground">
-                                {comment.profiles?.full_name || 'Anonymous'}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(comment.created_at).toLocaleDateString('id-ID')}
-                              </span>
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {comment.profiles?.full_name || 'Anonymous'}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(comment.created_at).toLocaleDateString('id-ID')}
+                                </span>
+                              </div>
+                              
+                              {/* Delete button for comment owner */}
+                              {user && comment.user_id === user.id && (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                                    >
+                                      <MoreHorizontal size={14} />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDeleteComment(comment.id)}
+                                      className="text-destructive"
+                                      disabled={loading}
+                                    >
+                                      <Trash2 size={14} className="mr-2" />
+                                      Hapus
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              )}
                             </div>
                             <p className="text-sm text-foreground">{comment.content}</p>
                           </div>

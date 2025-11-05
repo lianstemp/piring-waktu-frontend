@@ -14,11 +14,8 @@ export function SavedRecipesView({
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   return (
     <div className="max-w-4xl w-full mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="mb-6">
         <h2 className="text-2xl font-serif font-bold text-foreground">Resep Disimpan</h2>
-        <Button variant="ghost" onClick={() => setSavedViewRecipes(null)}>
-          Kembali
-        </Button>
       </div>
 
       {savedViewRecipes?.length === 0 ? (
@@ -98,6 +95,7 @@ export function SavedRecipesView({
                   <Button
                     onClick={() => {
                       if (!isRecipeCooked) {
+                        console.log("Opening cooked modal for recipe:", savedRecipe)
                         setSelectedRecipe(savedRecipe)
                         setCookedModalOpen(true)
                       }
@@ -124,7 +122,18 @@ export function SavedRecipesView({
             setSelectedRecipe(null)
           }}
           onSubmit={onMarkAsCooked}
-          recipe={selectedRecipe.recipe_data}
+          recipe={{
+            name: selectedRecipe.recipe_name,
+            region: selectedRecipe.recipe_data?.region || "",
+            history: selectedRecipe.recipe_data?.history || "",
+            ingredients: selectedRecipe.recipe_data?.ingredients || [],
+            instructions: selectedRecipe.recipe_data?.instructions || [],
+            prep_time: selectedRecipe.recipe_data?.prep_time || "",
+            cook_time: selectedRecipe.recipe_data?.cook_time || "",
+            servings: selectedRecipe.recipe_data?.servings || 1,
+            difficulty: selectedRecipe.recipe_data?.difficulty || "mudah",
+            tags: selectedRecipe.recipe_data?.tags || []
+          }}
           sessionId={selectedRecipe.session_id}
           messageId={selectedRecipe.message_id}
         />
