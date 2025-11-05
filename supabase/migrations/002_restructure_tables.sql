@@ -107,46 +107,6 @@ CREATE POLICY "Users can update their own interactions" ON public.community_inte
 CREATE POLICY "Users can delete their own interactions" ON public.community_interactions
   FOR DELETE USING (auth.uid() = user_id);
 
--- Create updated community feed view
-CREATE VIEW public.community_feed AS
-SELECT 
-  cr.id,
-  cr.user_id,
-  p.full_name as author_name,
-  p.avatar_url as author_avatar,
-  p.username as author_username,
-  cr.recipe_name,
-  cr.recipe_data,
-  cr.user_photo_url,
-  cr.user_review,
-  cr.user_rating,
-  cr.cooking_notes,
-  cr.cooked_at,
-  cr.created_at,
-  cs.title as session_title,
-  cm.content as message_content,
-  cm.created_at as message_created_at,
-  COALESCE(like_count.count, 0) as like_count,
-  COALESCE(comment_count.count, 0) as comment_count
-FROM public.cooked_recipes cr
-JOIN public.profiles p ON cr.user_id = p.id
-LEFT JOIN public.chat_sessions cs ON cr.session_id = cs.id
-LEFT JOIN public.chat_messages cm ON cr.message_id = cm.id
-LEFT JOIN (
-  SELECT cooked_recipe_id, COUNT(*) as count 
-  FROM public.community_interactions 
-  WHERE interaction_type = 'like' 
-  GROUP BY cooked_recipe_id
-) like_count ON cr.id = like_count.cooked_recipe_id
-LEFT JOIN (
-  SELECT cooked_recipe_id, COUNT(*) as count 
-  FROM public.community_interactions 
-  WHERE interaction_type = 'comment' 
-  GROUP BY cooked_recipe_id
-) comment_count ON cr.id = comment_count.cooked_recipe_id
-WHERE cr.is_public = true
-ORDER BY cr.created_at DESC;
-
 -- Create indexes for better performance
 CREATE INDEX idx_saved_recipes_user_session ON public.saved_recipes(user_id, session_id);
 CREATE INDEX idx_saved_recipes_message ON public.saved_recipes(message_id);

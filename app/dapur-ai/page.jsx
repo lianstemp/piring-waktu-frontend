@@ -421,10 +421,11 @@ export default function DapurAIPage() {
         cookedData.recipeName,
         cookedData.recipeData,
         {
-          is_public: true,
-          user_review: "",
-          user_rating: null,
-          cooking_notes: ""
+          user_photo_url: cookedData.user_photo_url,
+          user_review: cookedData.user_review,
+          user_rating: cookedData.user_rating,
+          is_public: cookedData.is_public,
+          cooking_notes: cookedData.cooking_notes
         }
       )
       
@@ -496,6 +497,7 @@ export default function DapurAIPage() {
               savedViewRecipes={savedViewRecipes}
               setSavedViewRecipes={setSavedViewRecipes}
               savedRecipes={savedRecipes}
+              cookedRecipes={cookedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               onMarkAsCooked={handleMarkAsCooked}
             />
@@ -506,6 +508,7 @@ export default function DapurAIPage() {
               messages={messages}
               handleSelectRecipe={handleSelectRecipe}
               savedRecipes={savedRecipes}
+              cookedRecipes={cookedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               messagesEndRef={messagesEndRef}
               onMarkAsCooked={handleMarkAsCooked}

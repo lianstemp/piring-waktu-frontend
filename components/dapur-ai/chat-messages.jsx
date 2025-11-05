@@ -5,6 +5,7 @@ export function ChatMessages({
   messages, 
   handleSelectRecipe, 
   savedRecipes, 
+  cookedRecipes,
   toggleSaveRecipe,
   messagesEndRef,
   onMarkAsCooked,
@@ -19,6 +20,7 @@ export function ChatMessages({
             handleSelectRecipe={handleSelectRecipe}
             sessionId={sessionId}
             savedRecipes={savedRecipes}
+            cookedRecipes={cookedRecipes}
             toggleSaveRecipe={toggleSaveRecipe}
             onMarkAsCooked={onMarkAsCooked}
           />

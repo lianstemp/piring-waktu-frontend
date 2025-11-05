@@ -1,13 +1,17 @@
 import { Button } from "@/components/ui/button"
-import { RecipeCard } from "./recipe-card"
+import { CookedModal } from "./cooked-modal"
+import { useState } from "react"
 
 export function SavedRecipesView({ 
   savedViewRecipes, 
   setSavedViewRecipes, 
   savedRecipes, 
+  cookedRecipes,
   toggleSaveRecipe,
   onMarkAsCooked 
 }) {
+  const [cookedModalOpen, setCookedModalOpen] = useState(false)
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
   return (
     <div className="max-w-4xl w-full mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -20,7 +24,12 @@ export function SavedRecipesView({
       {savedViewRecipes?.length === 0 ? (
         <div className="text-muted-foreground">Belum ada resep yang disimpan.</div>
       ) : (
-        savedViewRecipes?.map((savedRecipe) => (
+        savedViewRecipes?.map((savedRecipe) => {
+          const isRecipeCooked = cookedRecipes.some(cooked => 
+            cooked.session_id === savedRecipe.session_id && cooked.message_id === savedRecipe.message_id
+          )
+          
+          return (
           <div key={savedRecipe.id} className="bg-card border border-border rounded-2xl p-6">
             <div className="mb-4">
               <h3 className="text-lg font-bold text-foreground">{savedRecipe.recipe_name}</h3>
@@ -87,21 +96,38 @@ export function SavedRecipesView({
                   </Button>
                   
                   <Button
-                    onClick={() => onMarkAsCooked({
-                      sessionId: savedRecipe.session_id,
-                      messageId: savedRecipe.message_id,
-                      recipeName: savedRecipe.recipe_name,
-                      recipeData: savedRecipe.recipe_data
-                    })}
+                    onClick={() => {
+                      if (!isRecipeCooked) {
+                        setSelectedRecipe(savedRecipe)
+                        setCookedModalOpen(true)
+                      }
+                    }}
+                    disabled={isRecipeCooked}
                     size="sm"
+                    variant={isRecipeCooked ? "secondary" : "default"}
                   >
-                    Tandai Sudah Dimasak
+                    {isRecipeCooked ? "Sudah Dimasak ✓" : "Tandai Sudah Dimasak"}
                   </Button>
                 </div>
               </div>
             )}
           </div>
-        ))
+          )
+        })
+      )}
+
+      {selectedRecipe && (
+        <CookedModal
+          isOpen={cookedModalOpen}
+          onClose={() => {
+            setCookedModalOpen(false)
+            setSelectedRecipe(null)
+          }}
+          onSubmit={onMarkAsCooked}
+          recipe={selectedRecipe.recipe_data}
+          sessionId={selectedRecipe.session_id}
+          messageId={selectedRecipe.message_id}
+        />
       )}
     </div>
   )

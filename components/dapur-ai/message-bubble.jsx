@@ -1,8 +1,11 @@
 import { Loader } from "lucide-react"
 
 import { Clock, Users, ChefHat, BookOpen, Heart, Share2 } from "lucide-react"
+import { useState } from "react"
+import { CookedModal } from "./cooked-modal"
 
-export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRecipes, toggleSaveRecipe, onMarkAsCooked }) {
+export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRecipes, cookedRecipes, toggleSaveRecipe, onMarkAsCooked }) {
+  const [cookedModalOpen, setCookedModalOpen] = useState(false)
   if (message.type === "user") {
     return (
       <div className="max-w-lg bg-primary text-primary-foreground rounded-2xl p-4">
@@ -54,6 +57,9 @@ export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRec
     const recipe = message.recipeDetail
     const isRecipeSaved = savedRecipes.some(saved => 
       saved.session_id === sessionId && saved.message_id === message.id
+    )
+    const isRecipeCooked = cookedRecipes.some(cooked => 
+      cooked.session_id === sessionId && cooked.message_id === message.id
     )
 
     return (
@@ -170,16 +176,16 @@ export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRec
           </button>
           
           <button
-            onClick={() => onMarkAsCooked({
-              sessionId,
-              messageId: message.id,
-              recipeName: recipe.name,
-              recipeData: recipe
-            })}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-background border border-border hover:bg-muted transition-colors"
+            onClick={() => !isRecipeCooked && setCookedModalOpen(true)}
+            disabled={isRecipeCooked}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+              isRecipeCooked 
+                ? "bg-green-100 text-green-800 border border-green-200 cursor-not-allowed" 
+                : "bg-background border border-border hover:bg-muted"
+            }`}
           >
             <ChefHat size={16} />
-            Sudah Dimasak
+            {isRecipeCooked ? "Sudah Dimasak ✓" : "Sudah Dimasak"}
           </button>
           
           <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-background border border-border hover:bg-muted transition-colors">
@@ -187,6 +193,15 @@ export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRec
             Bagikan
           </button>
         </div>
+
+        <CookedModal
+          isOpen={cookedModalOpen}
+          onClose={() => setCookedModalOpen(false)}
+          onSubmit={onMarkAsCooked}
+          recipe={recipe}
+          sessionId={sessionId}
+          messageId={message.id}
+        />
       </div>
     )
   }
