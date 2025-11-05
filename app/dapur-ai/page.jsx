@@ -86,6 +86,17 @@ export default function DapurAIPage() {
     }
   }
 
+  const loadCookedRecipes = async () => {
+    if (!user) return
+    
+    try {
+      const response = await api.recipe.getCookedRecipes()
+      setCookedRecipes(response.recipes || [])
+    } catch (error) {
+      console.error("Error loading cooked recipes:", error)
+    }
+  }
+
   const loadChatSession = async (sessionId) => {
     try {
       setCurrentSessionId(sessionId)
@@ -96,6 +107,7 @@ export default function DapurAIPage() {
         type: msg.message_type,
         content: msg.content,
         recipes: msg.metadata?.recipes || null,
+        recipeDetail: msg.metadata?.recipe_detail || null,
         selectedRecipe: msg.recipes || null,
         timestamp: msg.created_at
       }))
@@ -306,18 +318,12 @@ export default function DapurAIPage() {
       
       if (isAlreadySaved) {
         await api.recipe.unsaveRecipe(sessionId, messageId)
-        setSavedRecipes((prev) => prev.filter(saved => 
-          !(saved.session_id === sessionId && saved.message_id === messageId)
-        ))
       } else {
         await api.recipe.saveRecipe(sessionId, messageId, recipeName, recipeData)
-        setSavedRecipes((prev) => [...prev, {
-          session_id: sessionId,
-          message_id: messageId,
-          recipe_name: recipeName,
-          recipe_data: recipeData
-        }])
       }
+      
+      // Refresh saved recipes list
+      await loadSavedRecipes()
     } catch (error) {
       console.error("Error toggling save recipe:", error)
     }
@@ -332,6 +338,18 @@ export default function DapurAIPage() {
     } catch (error) {
       console.error("Error loading saved recipes:", error)
       setSavedViewRecipes([])
+    }
+  }
+
+  const showCookedRecipes = async () => {
+    if (!user) return
+    
+    try {
+      const response = await api.recipe.getCookedRecipes()
+      // You can create a separate state for cooked recipes view if needed
+      console.log("Cooked recipes:", response.recipes)
+    } catch (error) {
+      console.error("Error loading cooked recipes:", error)
     }
   }
 
@@ -352,7 +370,8 @@ export default function DapurAIPage() {
         }
       )
       
-      setCookedRecipes((prev) => [...prev, cookedData])
+      // Refresh cooked recipes list
+      await loadCookedRecipes()
       
       // Remove from saved recipes if it was saved
       setSavedRecipes((prev) => prev.filter(saved => 
@@ -397,7 +416,9 @@ export default function DapurAIPage() {
       <Sidebar 
         sidebarOpen={sidebarOpen}
         savedRecipes={savedRecipes}
+        cookedRecipes={cookedRecipes}
         showSavedRecipes={showSavedRecipes}
+        showCookedRecipes={showCookedRecipes}
         chatSessions={chatSessions}
         onSelectSession={loadChatSession}
         onNewChat={createNewChatSession}

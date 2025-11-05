@@ -6,7 +6,9 @@ import Image from "next/image"
 export function Sidebar({ 
   sidebarOpen, 
   savedRecipes, 
+  cookedRecipes,
   showSavedRecipes,
+  showCookedRecipes,
   chatSessions,
   onSelectSession,
   onNewChat
@@ -50,12 +52,18 @@ export function Sidebar({
               <span className="text-xs bg-muted px-2 rounded-full">{savedRecipes?.length || 0}</span>
             </Button>
 
-            <Button variant="ghost" className="w-full px-3 py-2 rounded-lg flex items-center justify-between">
+            <Button 
+              variant="ghost" 
+              onClick={showCookedRecipes}
+              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between ${
+                cookedRecipes?.length > 0 ? "bg-green-400 text-black" : ""
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <Check size={16} />
                 <span className="text-sm">Sudah Dimasak</span>
               </div>
-              <span className="text-xs bg-muted px-2 rounded-full">0</span>
+              <span className="text-xs bg-muted px-2 rounded-full">{cookedRecipes?.length || 0}</span>
             </Button>
           </div>
 
