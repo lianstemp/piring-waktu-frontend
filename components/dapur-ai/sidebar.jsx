@@ -19,6 +19,7 @@ import { Plus, MessageSquare, Bookmark, Check, MoreHorizontal, Edit, Trash2 } fr
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 
 export function Sidebar({ 
   sidebarOpen, 
@@ -33,6 +34,9 @@ export function Sidebar({
   onDeleteSession,
   resetViews
 }) {
+  const searchParams = useSearchParams()
+  const currentView = searchParams.get('view')
+  const currentSession = searchParams.get('session')
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedSession, setSelectedSession] = useState(null)
@@ -82,7 +86,11 @@ export function Sidebar({
             resetViews()
             onNewChat()
           }}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg flex items-center justify-center gap-2"
+          className={`w-full rounded-lg flex items-center justify-center gap-2 ${
+            !currentSession && !currentView ? 
+            "bg-primary hover:bg-primary/90 text-primary-foreground" : 
+            "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+          }`}
         >
           <Plus size={18} />
           Chat Baru
@@ -97,7 +105,8 @@ export function Sidebar({
               variant="ghost"
               onClick={showSavedRecipes}
               className={`w-full px-3 py-2 rounded-lg flex items-center justify-between ${
-                savedRecipes?.length > 0 ? "bg-yellow-400 text-black" : ""
+                currentView === 'saved' ? "bg-yellow-400 text-black" : 
+                savedRecipes?.length > 0 ? "hover:bg-yellow-100" : ""
               }`}
             >
               <div className="flex items-center gap-2">
@@ -111,7 +120,8 @@ export function Sidebar({
               variant="ghost" 
               onClick={showCookedRecipes}
               className={`w-full px-3 py-2 rounded-lg flex items-center justify-between ${
-                cookedRecipes?.length > 0 ? "bg-green-400 text-black" : ""
+                currentView === 'cooked' ? "bg-green-400 text-black" : 
+                cookedRecipes?.length > 0 ? "hover:bg-green-100" : ""
               }`}
             >
               <div className="flex items-center gap-2">
@@ -128,14 +138,18 @@ export function Sidebar({
               chatSessions.slice(0, 10).map((session) => (
                 <div
                   key={session.id}
-                  className="group flex items-center w-full px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                  className={`group flex items-center w-full px-3 py-2 rounded-lg transition-colors ${
+                    currentSession === session.id ? "bg-primary/10 border border-primary/20" : "hover:bg-muted"
+                  }`}
                 >
                   <button
                     onClick={() => {
                       resetViews()
                       onSelectSession(session.id)
                     }}
-                    className="flex-1 text-left text-sm text-muted-foreground hover:text-foreground transition-colors truncate"
+                    className={`flex-1 text-left text-sm transition-colors truncate ${
+                      currentSession === session.id ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
                     <MessageSquare size={16} className="inline mr-2" />
                     {session.title}

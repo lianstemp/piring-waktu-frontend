@@ -52,15 +52,25 @@ function DapurAIContent() {
       loadSavedRecipes()
       loadCookedRecipes()
       
-      // Check for session parameter
+      // Check for view parameter
+      const view = searchParams.get('view')
       const sessionId = searchParams.get('session')
+      
+      if (view === 'saved') {
+        loadSavedRecipesView()
+      } else if (view === 'cooked') {
+        loadCookedRecipesView()
+      } else {
+        resetViews()
+      }
+      
       if (sessionId && sessionId !== 'new' && sessionId !== currentSessionId) {
         // Only load if it's a different session and not currently streaming a new session
         if (!isLoading && !isStreamingNewSession) {
           loadChatSession(sessionId)
         }
-      } else if (!sessionId) {
-        // New chat or no session parameter
+      } else if (!sessionId && !view) {
+        // New chat or no session parameter and no view
         setMessages([])
         setCurrentSessionId(null)
       }
@@ -172,6 +182,7 @@ function DapurAIContent() {
     setCurrentSessionId(null)
     setMessages([])
     setUploadedImages([])
+    resetViews()
   }
 
 
@@ -457,24 +468,38 @@ function DapurAIContent() {
     }
   }
 
-  const showSavedRecipes = async () => {
+  // Functions that handle navigation AND data loading (called by sidebar buttons)
+  const showSavedRecipes = () => {
+    if (!user) return
+    router.push('/dapur-ai?view=saved')
+  }
+
+  const showCookedRecipes = () => {
+    if (!user) return
+    router.push('/dapur-ai?view=cooked')
+  }
+
+  // Functions that only load data (called by useEffect)
+  const loadSavedRecipesView = async () => {
     if (!user) return
     
     try {
       const response = await api.recipe.getSavedRecipes()
       setSavedViewRecipes(response.recipes || [])
+      setCookedViewRecipes(null) // Clear other view
     } catch (error) {
       console.error("Error loading saved recipes:", error)
       setSavedViewRecipes([])
     }
   }
 
-  const showCookedRecipes = async () => {
+  const loadCookedRecipesView = async () => {
     if (!user) return
     
     try {
       const response = await api.recipe.getCookedRecipes()
       setCookedViewRecipes(response.recipes || [])
+      setSavedViewRecipes(null) // Clear other view
       console.log("Cooked recipes:", response.recipes)
     } catch (error) {
       console.error("Error loading cooked recipes:", error)
