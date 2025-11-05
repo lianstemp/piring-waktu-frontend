@@ -97,7 +97,7 @@ export function ChatInput({
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={uploadedImages?.length > 0 ? "Tanyakan tentang gambar yang dikirim..." : "Tanyakan tentang resep atau bahan makanan..."}
+          placeholder={uploadedImages?.length > 0 ? "Deskripsikan gambar atau tanyakan sesuatu..." : "Tanyakan tentang resep atau bahan makanan..."}
           className="flex-1 bg-background border-border text-foreground placeholder:text-muted-foreground rounded-full px-6"
           disabled={isLoading}
         />

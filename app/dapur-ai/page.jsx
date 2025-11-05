@@ -11,6 +11,7 @@ import { CookedRecipesView } from "@/components/dapur-ai/cooked-recipes-view"
 import { ChatInput } from "@/components/dapur-ai/chat-input"
 import { createClient } from "@/lib/supabase/client"
 import api from "@/lib/api"
+import { v4 as uuidv4 } from 'uuid'
 
 export default function DapurAIPage() {
   const router = useRouter()
@@ -267,7 +268,7 @@ export default function DapurAIPage() {
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let aiMessageContent = ""
-      let aiMessageId = (Date.now() + 1).toString()
+      let aiMessageId = uuidv4()
       let newSessionId = currentSessionId
 
       const loadingMessage = {
