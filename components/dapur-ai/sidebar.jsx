@@ -5,7 +5,7 @@ import Image from "next/image"
 
 export function Sidebar({ 
   sidebarOpen, 
-  savedIds, 
+  savedRecipes, 
   showSavedRecipes,
   chatSessions,
   onSelectSession,
@@ -40,14 +40,14 @@ export function Sidebar({
               variant="ghost"
               onClick={showSavedRecipes}
               className={`w-full px-3 py-2 rounded-lg flex items-center justify-between ${
-                savedIds.length > 0 ? "bg-yellow-400 text-black" : ""
+                savedRecipes?.length > 0 ? "bg-yellow-400 text-black" : ""
               }`}
             >
               <div className="flex items-center gap-2">
                 <Bookmark size={16} />
                 <span className="text-sm">Resep Disimpan</span>
               </div>
-              <span className="text-xs bg-muted px-2 rounded-full">{savedIds.length}</span>
+              <span className="text-xs bg-muted px-2 rounded-full">{savedRecipes?.length || 0}</span>
             </Button>
 
             <Button variant="ghost" className="w-full px-3 py-2 rounded-lg flex items-center justify-between">

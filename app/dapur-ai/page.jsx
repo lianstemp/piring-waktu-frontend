@@ -20,7 +20,7 @@ export default function DapurAIPage() {
   const [input, setInput] = useState("")
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
-  const [savedIds, setSavedIds] = useState([])
+  const [savedRecipes, setSavedRecipes] = useState([])
   const [savedViewRecipes, setSavedViewRecipes] = useState(null)
   const [cookedRecipes, setCookedRecipes] = useState([])
   const [currentSessionId, setCurrentSessionId] = useState(null)
@@ -44,6 +44,7 @@ export default function DapurAIPage() {
     if (user) {
       loadChatSessions()
       loadSavedRecipes()
+      loadCookedRecipes()
     }
   }, [user])
 
@@ -79,7 +80,7 @@ export default function DapurAIPage() {
     
     try {
       const response = await api.recipe.getSavedRecipes()
-      setSavedIds(response.recipes?.map(item => item.recipe_id) || [])
+      setSavedRecipes(response.recipes || [])
     } catch (error) {
       console.error("Error loading saved recipes:", error)
     }
@@ -181,7 +182,16 @@ export default function DapurAIPage() {
                       : msg
                   )
                 )
-              } 
+              }
+              else if (data.type === 'recipe_detail') {
+                setMessages((prev) => 
+                  prev.map(msg => 
+                    msg.id === aiMessageId 
+                      ? { ...msg, recipeDetail: data.recipe, isLoading: false }
+                      : msg
+                  )
+                )
+              }
               else if (data.type === 'end') {
                 setIsLoading(false)
               }
@@ -203,36 +213,80 @@ export default function DapurAIPage() {
     }
   }
 
-  const handleSelectRecipe = async (recipeId, recipeName, region) => {
+  const handleSelectRecipe = async (recipe, messageId, sessionId) => {
     const userSelection = {
       id: (Date.now() + 1).toString(),
       type: "user",
-      content: recipeName,
+      content: `Tolong berikan detail lengkap resep ${recipe.name}`,
     }
 
     setMessages((prev) => [...prev, userSelection])
+    setIsLoading(true)
 
     try {
-      let recipe = await api.recipe.getRecipe(recipeId)
-      if (recipe.tags && recipe.tags.includes('loading')) {
-        recipe = await api.recipe.generateRecipeDetail(
-          recipeId,
-          recipeName,
-          region,
-          messages[messages.length - 2]?.content || "bahan-bahan yang tersedia"
-        )
-      }
+      // Send request for detailed recipe using the unified agent
+      const response = await api.chat.streamChat(
+        `Tolong berikan detail lengkap resep ${recipe.name} dari ${recipe.region}`, 
+        currentSessionId
+      )
+      
+      if (!response.ok) throw new Error("Failed to get response from backend")
 
-      const detailMessage = {
-        id: (Date.now() + 2).toString(),
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let aiMessageContent = ""
+      let aiMessageId = (Date.now() + 1).toString()
+
+      const loadingMessage = {
+        id: aiMessageId,
         type: "ai",
-        content: `${recipe.name}:`,
-        selectedRecipe: recipe,
+        content: "",
+        isLoading: true
       }
+      setMessages((prev) => [...prev, loadingMessage])
 
-      setMessages((prev) => [...prev, detailMessage])
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6))
+              
+              if (data.type === 'text') {
+                aiMessageContent += data.content
+                setMessages((prev) => 
+                  prev.map(msg => 
+                    msg.id === aiMessageId 
+                      ? { ...msg, content: aiMessageContent, isLoading: false }
+                      : msg
+                  )
+                )
+              } 
+              else if (data.type === 'recipe_detail') {
+                setMessages((prev) => 
+                  prev.map(msg => 
+                    msg.id === aiMessageId 
+                      ? { ...msg, recipeDetail: data.recipe, isLoading: false }
+                      : msg
+                  )
+                )
+              }
+              else if (data.type === 'end') {
+                setIsLoading(false)
+              }
+            } catch (error) {
+              console.error("Error parsing streaming data:", error)
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error("Error getting recipe details:", error)
+      setIsLoading(false)
       const errorMessage = {
         id: (Date.now() + 2).toString(),
         type: "ai",
@@ -242,16 +296,27 @@ export default function DapurAIPage() {
     }
   }
 
-  const toggleSaveRecipe = async (recipeId) => {
+  const toggleSaveRecipe = async (sessionId, messageId, recipeName, recipeData) => {
     if (!user) return
     
     try {
-      if (savedIds.includes(recipeId)) {
-        await api.recipe.unsaveRecipe(recipeId)
-        setSavedIds((prev) => prev.filter((id) => id !== recipeId))
+      const isAlreadySaved = savedRecipes.some(saved => 
+        saved.session_id === sessionId && saved.message_id === messageId
+      )
+      
+      if (isAlreadySaved) {
+        await api.recipe.unsaveRecipe(sessionId, messageId)
+        setSavedRecipes((prev) => prev.filter(saved => 
+          !(saved.session_id === sessionId && saved.message_id === messageId)
+        ))
       } else {
-        await api.recipe.saveRecipe(recipeId, currentSessionId)
-        setSavedIds((prev) => [...prev, recipeId])
+        await api.recipe.saveRecipe(sessionId, messageId, recipeName, recipeData)
+        setSavedRecipes((prev) => [...prev, {
+          session_id: sessionId,
+          message_id: messageId,
+          recipe_name: recipeName,
+          recipe_data: recipeData
+        }])
       }
     } catch (error) {
       console.error("Error toggling save recipe:", error)
@@ -263,18 +328,40 @@ export default function DapurAIPage() {
     
     try {
       const response = await api.recipe.getSavedRecipes()
-      setSavedViewRecipes(response.recipes?.length > 0 ? response.recipes : [])
+      setSavedViewRecipes(response.recipes || [])
     } catch (error) {
       console.error("Error loading saved recipes:", error)
       setSavedViewRecipes([])
     }
   }
 
-  const handleMarkAsCooked = (cookedData) => {
-    setCookedRecipes((prev) => [...prev, cookedData])
-    setSavedIds((prev) => prev.filter((id) => id !== cookedData.recipeId))
-    if (cookedData.isPublic) {
+  const handleMarkAsCooked = async (cookedData) => {
+    if (!user) return
+    
+    try {
+      await api.recipe.markAsCooked(
+        cookedData.sessionId,
+        cookedData.messageId,
+        cookedData.recipeName,
+        cookedData.recipeData,
+        {
+          is_public: true,
+          user_review: "",
+          user_rating: null,
+          cooking_notes: ""
+        }
+      )
+      
+      setCookedRecipes((prev) => [...prev, cookedData])
+      
+      // Remove from saved recipes if it was saved
+      setSavedRecipes((prev) => prev.filter(saved => 
+        !(saved.session_id === cookedData.sessionId && saved.message_id === cookedData.messageId)
+      ))
+      
       console.log("Recipe marked as cooked and will appear in community:", cookedData)
+    } catch (error) {
+      console.error("Error marking recipe as cooked:", error)
     }
   }
 
@@ -309,7 +396,7 @@ export default function DapurAIPage() {
     <div className="h-screen bg-background flex overflow-hidden">
       <Sidebar 
         sidebarOpen={sidebarOpen}
-        savedIds={savedIds}
+        savedRecipes={savedRecipes}
         showSavedRecipes={showSavedRecipes}
         chatSessions={chatSessions}
         onSelectSession={loadChatSession}
@@ -327,7 +414,7 @@ export default function DapurAIPage() {
             <SavedRecipesView
               savedViewRecipes={savedViewRecipes}
               setSavedViewRecipes={setSavedViewRecipes}
-              savedIds={savedIds}
+              savedRecipes={savedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               onMarkAsCooked={handleMarkAsCooked}
             />
@@ -337,10 +424,11 @@ export default function DapurAIPage() {
             <ChatMessages
               messages={messages}
               handleSelectRecipe={handleSelectRecipe}
-              savedIds={savedIds}
+              savedRecipes={savedRecipes}
               toggleSaveRecipe={toggleSaveRecipe}
               messagesEndRef={messagesEndRef}
               onMarkAsCooked={handleMarkAsCooked}
+              sessionId={currentSessionId}
             />
           )}
         </div>

@@ -4,7 +4,7 @@ import { RecipeCard } from "./recipe-card"
 export function SavedRecipesView({ 
   savedViewRecipes, 
   setSavedViewRecipes, 
-  savedIds, 
+  savedRecipes, 
   toggleSaveRecipe,
   onMarkAsCooked 
 }) {
@@ -17,17 +17,90 @@ export function SavedRecipesView({
         </Button>
       </div>
 
-      {savedViewRecipes.length === 0 ? (
-        <div className="text-muted-foreground">Belum ada resep yang ditandai.</div>
+      {savedViewRecipes?.length === 0 ? (
+        <div className="text-muted-foreground">Belum ada resep yang disimpan.</div>
       ) : (
-        savedViewRecipes.map((recipe) => (
-          <RecipeCard
-            key={recipe.id}
-            recipe={recipe}
-            savedIds={savedIds}
-            toggleSaveRecipe={toggleSaveRecipe}
-            onMarkAsCooked={onMarkAsCooked}
-          />
+        savedViewRecipes?.map((savedRecipe) => (
+          <div key={savedRecipe.id} className="bg-card border border-border rounded-2xl p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-foreground">{savedRecipe.recipe_name}</h3>
+              <p className="text-sm text-muted-foreground">
+                Disimpan dari: {savedRecipe.chat_sessions?.title || 'Chat'}
+              </p>
+              {savedRecipe.notes && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Catatan: {savedRecipe.notes}
+                </p>
+              )}
+            </div>
+            
+            {savedRecipe.recipe_data && (
+              <div className="space-y-4">
+                {savedRecipe.recipe_data.history && (
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">Sejarah</h4>
+                    <p className="text-sm text-foreground">{savedRecipe.recipe_data.history}</p>
+                  </div>
+                )}
+                
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">Bahan-bahan</h4>
+                    <ul className="text-sm text-foreground space-y-1">
+                      {savedRecipe.recipe_data.ingredients?.map((ingredient, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-primary">•</span>
+                          {ingredient}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold text-foreground mb-2">Cara Memasak</h4>
+                    <ol className="text-sm text-foreground space-y-1">
+                      {savedRecipe.recipe_data.instructions?.slice(0, 3).map((step, index) => (
+                        <li key={index} className="flex gap-2">
+                          <span className="text-primary font-semibold">{index + 1}.</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                      {savedRecipe.recipe_data.instructions?.length > 3 && (
+                        <li className="text-muted-foreground">... dan {savedRecipe.recipe_data.instructions.length - 3} langkah lainnya</li>
+                      )}
+                    </ol>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 pt-4 border-t border-border">
+                  <Button
+                    onClick={() => toggleSaveRecipe(
+                      savedRecipe.session_id, 
+                      savedRecipe.message_id, 
+                      savedRecipe.recipe_name, 
+                      savedRecipe.recipe_data
+                    )}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Hapus dari Simpanan
+                  </Button>
+                  
+                  <Button
+                    onClick={() => onMarkAsCooked({
+                      sessionId: savedRecipe.session_id,
+                      messageId: savedRecipe.message_id,
+                      recipeName: savedRecipe.recipe_name,
+                      recipeData: savedRecipe.recipe_data
+                    })}
+                    size="sm"
+                  >
+                    Tandai Sudah Dimasak
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         ))
       )}
     </div>
