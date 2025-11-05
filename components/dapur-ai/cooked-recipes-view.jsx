@@ -39,9 +39,36 @@ export function CookedRecipesView({
       ) : (
         cookedViewRecipes?.map((cookedRecipe) => (
           <div key={cookedRecipe.id} className="bg-card border border-border rounded-2xl overflow-hidden">
-            {/* Header with photo */}
+            {/* Header with photos */}
             <div className="relative">
-              {cookedRecipe.user_photo_url ? (
+              {cookedRecipe.user_photos && cookedRecipe.user_photos.length > 0 ? (
+                <div className="aspect-video w-full">
+                  {cookedRecipe.user_photos.length === 1 ? (
+                    <img 
+                      src={cookedRecipe.user_photos[0].url} 
+                      alt={cookedRecipe.recipe_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="grid grid-cols-2 gap-1 h-full">
+                      {cookedRecipe.user_photos.slice(0, 4).map((photo, index) => (
+                        <div key={index} className="relative">
+                          <img 
+                            src={photo.url} 
+                            alt={`${cookedRecipe.recipe_name} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {index === 3 && cookedRecipe.user_photos.length > 4 && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-semibold">
+                              +{cookedRecipe.user_photos.length - 4}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : cookedRecipe.user_photo_url ? (
                 <div className="aspect-video w-full">
                   <img 
                     src={cookedRecipe.user_photo_url} 

@@ -93,7 +93,20 @@ function FeedCard({ recipe, onClick }) {
     >
       {/* Recipe Image */}
       <div className="aspect-square relative overflow-hidden">
-        {recipe.user_photo_url ? (
+        {recipe.user_photos && recipe.user_photos.length > 0 ? (
+          <div className="relative w-full h-full">
+            <img 
+              src={recipe.user_photos[0].url} 
+              alt={recipe.recipe_name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            />
+            {recipe.user_photos.length > 1 && (
+              <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                +{recipe.user_photos.length - 1}
+              </div>
+            )}
+          </div>
+        ) : recipe.user_photo_url ? (
           <img 
             src={recipe.user_photo_url} 
             alt={recipe.recipe_name}

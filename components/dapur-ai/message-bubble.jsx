@@ -9,6 +9,31 @@ export function MessageBubble({ message, handleSelectRecipe, sessionId, savedRec
   if (message.type === "user") {
     return (
       <div className="max-w-lg bg-primary text-primary-foreground rounded-2xl p-4">
+        {message.images && message.images.length > 0 && (
+          <div className="mb-3">
+            {message.images.length === 1 ? (
+              <img 
+                src={message.images[0].preview} 
+                alt={message.images[0].name}
+                className="max-w-full h-auto rounded-lg border border-primary-foreground/20"
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {message.images.map((image, index) => (
+                  <img 
+                    key={index}
+                    src={image.preview} 
+                    alt={image.name}
+                    className="w-full h-24 object-cover rounded-lg border border-primary-foreground/20"
+                  />
+                ))}
+              </div>
+            )}
+            <p className="text-xs mt-2 opacity-80">
+              {message.images.length} gambar dikirim
+            </p>
+          </div>
+        )}
         <p className="text-sm">{message.content}</p>
       </div>
     )

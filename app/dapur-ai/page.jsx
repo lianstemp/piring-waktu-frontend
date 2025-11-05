@@ -30,6 +30,7 @@ export default function DapurAIPage() {
   const [chatSessions, setChatSessions] = useState([])
   const [authLoading, setAuthLoading] = useState(true)
   const [isStreamingNewSession, setIsStreamingNewSession] = useState(false)
+  const [uploadedImages, setUploadedImages] = useState([])
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -169,23 +170,74 @@ export default function DapurAIPage() {
     router.push('/dapur-ai')
     setCurrentSessionId(null)
     setMessages([])
+    setUploadedImages([])
   }
+
+
 
   const handleSelectSession = (sessionId) => {
     router.push(`/dapur-ai?session=${sessionId}`)
   }
 
+  const handleImageUpload = async (file) => {
+    try {
+      // Check if we already have 5 images (limit)
+      if (uploadedImages.length >= 5) {
+        alert("Maksimal 5 gambar per pesan")
+        return
+      }
+
+      // Create preview
+      const preview = URL.createObjectURL(file)
+      
+      // Upload to backend
+      const uploadResult = await api.chat.uploadImage(file)
+      
+      const newImage = {
+        file,
+        preview,
+        name: file.name,
+        size: file.size,
+        imageData: uploadResult.image_data,
+        imageType: uploadResult.image_type
+      }
+
+      setUploadedImages(prev => [...prev, newImage])
+    } catch (error) {
+      console.error("Error uploading image:", error)
+      alert("Gagal mengunggah gambar. Silakan coba lagi.")
+    }
+  }
+
+  const handleRemoveImage = (index) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev]
+      // Clean up preview URL
+      if (newImages[index]?.preview) {
+        URL.revokeObjectURL(newImages[index].preview)
+      }
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
+
   const handleSendMessage = async (e) => {
     e.preventDefault()
-    if (!input.trim() || isLoading || !user) return
+    if ((!input.trim() && uploadedImages.length === 0) || isLoading || !user) return
 
     const currentInput = input
+    const currentImages = [...uploadedImages]
     setInput("")
+    setUploadedImages([])
 
     const userMessage = {
       id: Date.now().toString(),
       type: "user",
-      content: currentInput,
+      content: currentInput || "Analisis gambar ini",
+      images: currentImages.length > 0 ? currentImages.map(img => ({
+        preview: img.preview,
+        name: img.name
+      })) : null
     }
     setMessages((prev) => [...prev, userMessage])
 
@@ -199,7 +251,17 @@ export default function DapurAIPage() {
     try {
       // Session ID akan null jika ini chat baru
       // Backend akan otomatis create session dan return session_id
-      const response = await api.chat.streamChat(currentInput, currentSessionId)
+      const imagesData = currentImages.length > 0 ? currentImages.map(img => ({
+        data: img.imageData,
+        type: img.imageType,
+        name: img.name
+      })) : null
+
+      const response = await api.chat.streamChat(
+        currentInput || "Analisis gambar ini", 
+        currentSessionId,
+        imagesData
+      )
       if (!response.ok) throw new Error("Failed to get response from backend")
 
       const reader = response.body.getReader()
@@ -540,6 +602,9 @@ export default function DapurAIPage() {
           setInput={setInput}
           handleSendMessage={handleSendMessage}
           isLoading={isLoading}
+          onImageUpload={handleImageUpload}
+          uploadedImages={uploadedImages}
+          onRemoveImage={handleRemoveImage}
         />
       </div>
     </div>

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Star, Upload, X, Plus, Minus, Loader2 } from "lucide-react"
+import { Star, X, Plus, Minus, Loader2, Camera, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
 export function CookedModal({ 
@@ -64,80 +64,121 @@ export function CookedModal({
     }
   }, [recipe])
 
-  const [selectedFile, setSelectedFile] = useState(null)
-  const [previewUrl, setPreviewUrl] = useState("")
+  const [selectedFiles, setSelectedFiles] = useState([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const supabase = createClient()
 
-  // Cleanup preview URL when component unmounts
-  const cleanupPreview = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
-    }
+  // Cleanup preview URLs when component unmounts
+  const cleanupPreviews = () => {
+    selectedFiles.forEach(file => {
+      if (file.previewUrl) {
+        URL.revokeObjectURL(file.previewUrl)
+      }
+    })
   }
 
   // Reset form when modal closes
   const handleClose = () => {
-    cleanupPreview()
-    setSelectedFile(null)
-    setPreviewUrl("")
+    cleanupPreviews()
+    setSelectedFiles([])
     setUploading(false)
     setError("")
     onClose()
   }
 
   const handleFileSelect = (e) => {
-    const file = e.target.files[0]
-    if (file) {
+    const files = Array.from(e.target.files)
+    
+    // Check if adding these files would exceed the limit
+    if (selectedFiles.length + files.length > 5) {
+      setError("Maksimal 5 gambar per resep")
+      return
+    }
+
+    const validFiles = []
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    
+    for (const file of files) {
       // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        setError("File size must be less than 5MB")
-        return
+        setError("Ukuran file harus kurang dari 5MB")
+        continue
       }
 
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError("Please select an image file")
-        return
+      // Validate file type (exclude SVG and other unsupported formats)
+      if (!allowedTypes.includes(file.type.toLowerCase())) {
+        setError("Hanya mendukung format JPG, PNG, dan WebP")
+        continue
       }
 
-      setError("")
-      setSelectedFile(file)
-      
       // Create preview URL
-      const url = URL.createObjectURL(file)
-      setPreviewUrl(url)
+      const previewUrl = URL.createObjectURL(file)
+      
+      validFiles.push({
+        file,
+        previewUrl,
+        name: file.name,
+        size: file.size
+      })
     }
+
+    if (validFiles.length > 0) {
+      setError("")
+      setSelectedFiles(prev => [...prev, ...validFiles])
+    }
+    
+    // Reset input
+    e.target.value = ''
   }
 
-  const uploadFile = async () => {
-    if (!selectedFile) return null
+  const removeFile = (index) => {
+    setSelectedFiles(prev => {
+      const newFiles = [...prev]
+      // Clean up preview URL
+      if (newFiles[index]?.previewUrl) {
+        URL.revokeObjectURL(newFiles[index].previewUrl)
+      }
+      newFiles.splice(index, 1)
+      return newFiles
+    })
+  }
+
+  const uploadFiles = async () => {
+    if (selectedFiles.length === 0) return []
 
     setUploading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('User not authenticated')
 
-      // Create unique filename
-      const fileExt = selectedFile.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const uploadPromises = selectedFiles.map(async (fileObj, index) => {
+        // Create unique filename
+        const fileExt = fileObj.file.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}_${index}.${fileExt}`
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('cooked-recipes')
-        .upload(fileName, selectedFile)
+        // Upload to Supabase Storage
+        const { error } = await supabase.storage
+          .from('cooked-recipes')
+          .upload(fileName, fileObj.file)
 
-      if (error) throw error
+        if (error) throw error
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('cooked-recipes')
-        .getPublicUrl(fileName)
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('cooked-recipes')
+          .getPublicUrl(fileName)
 
-      return publicUrl
+        return {
+          url: publicUrl,
+          caption: fileObj.caption || '',
+          name: fileObj.name
+        }
+      })
+
+      return await Promise.all(uploadPromises)
     } catch (error) {
-      console.error('Error uploading file:', error)
+      console.error('Error uploading files:', error)
       throw error
     } finally {
       setUploading(false)
@@ -148,12 +189,8 @@ export function CookedModal({
     e.preventDefault()
     
     try {
-      let photoUrl = formData.user_photo_url
-
-      // Upload file if selected
-      if (selectedFile) {
-        photoUrl = await uploadFile()
-      }
+      // Upload files if selected
+      const uploadedPhotos = await uploadFiles()
 
       const cookedData = {
         sessionId,
@@ -171,7 +208,8 @@ export function CookedModal({
           difficulty: formData.difficulty,
           tags: recipe?.tags || []
         },
-        user_photo_url: photoUrl,
+        user_photos: uploadedPhotos,
+        user_photo_url: uploadedPhotos.length > 0 ? uploadedPhotos[0].url : null, // Keep for backward compatibility
         user_review: formData.user_review,
         user_rating: formData.user_rating,
         is_public: formData.is_public,
@@ -182,7 +220,7 @@ export function CookedModal({
       handleClose()
     } catch (error) {
       console.error('Error submitting cooked recipe:', error)
-      setError("Failed to submit recipe. Please try again.")
+      setError("Gagal menyimpan resep. Silakan coba lagi.")
     }
   }
 
@@ -400,15 +438,17 @@ export function CookedModal({
             <h3 className="text-lg font-semibold">Pengalaman Memasak</h3>
             
             <div>
-              <Label htmlFor="user_photo">Foto Hasil Masakan</Label>
+              <Label htmlFor="user_photos">Foto Hasil Masakan (Maksimal 5)</Label>
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <Input
-                    id="user_photo"
+                    id="user_photos"
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    multiple
                     onChange={handleFileSelect}
                     className="flex-1"
+                    disabled={selectedFiles.length >= 5}
                   />
                   {uploading && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -418,30 +458,38 @@ export function CookedModal({
                   )}
                 </div>
                 
-                {previewUrl && (
-                  <div className="relative">
-                    <img 
-                      src={previewUrl} 
-                      alt="Preview" 
-                      className="w-full max-w-xs h-48 object-cover rounded-lg border"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => {
-                        setSelectedFile(null)
-                        setPreviewUrl("")
-                        URL.revokeObjectURL(previewUrl)
-                      }}
-                    >
-                      <X size={16} />
-                    </Button>
+                {selectedFiles.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {selectedFiles.map((fileObj, index) => (
+                      <div key={index} className="relative group">
+                        <img 
+                          src={fileObj.previewUrl} 
+                          alt={`Preview ${index + 1}`} 
+                          className="w-full h-32 object-cover rounded-lg border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeFile(index)}
+                        >
+                          <X size={12} />
+                        </Button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 rounded-b-lg">
+                          <p className="truncate">{fileObj.name}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-
+                {selectedFiles.length < 5 && (
+                  <div className="text-sm text-muted-foreground">
+                    <Camera size={16} className="inline mr-2" />
+                    Anda dapat menambahkan {5 - selectedFiles.length} gambar lagi
+                  </div>
+                )}
               </div>
             </div>
 
