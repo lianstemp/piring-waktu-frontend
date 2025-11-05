@@ -6,9 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "deploy": "wrangler pages deploy .next --project-name=piring-waktu-frontend",
-    "preview": "wrangler pages dev .next --project-name=piring-waktu-frontend"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
